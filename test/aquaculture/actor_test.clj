@@ -1,0 +1,45 @@
+(ns aquaculture.actor-test
+  (:require [clojure.test :refer [deftest is testing]]
+            [aquaculture.actor :as actor]
+            [aquaculture.store :as store]))
+
+(defn- fresh-store []
+  (let [st (store/mem-store)]
+    (store/register-client! st {:client-id "client-1" :name "Kobo Aquaculture"})
+    (store/register-pond! st {:pond-id "P-1" :client-id "client-1"
+                              :name "pond-3"
+                              :fish-count 1000
+                              :max-feed-kg-per-fish 0.02
+                              :min-dissolved-oxygen-mgl 5.0})
+    st))
+
+(deftest commits-an-in-ceiling-in-floor-feed
+  (let [st (fresh-store)
+        graph (actor/build-graph {:store st})
+        request {:client-id "client-1" :op :approve-feed :stake :low
+                 :pond-id "P-1" :feed-kg 15 :dissolved-oxygen-mgl 6.0}
+        result (actor/run-request! graph request {} "thread-1")]
+    (is (= :done (:status result)))
+    (is (some? (get-in result [:state :record])))
+    (is (= 1 (count (store/records-of st "client-1"))))))
+
+(deftest holds-a-low-oxygen-feed
+  (let [st (fresh-store)
+        graph (actor/build-graph {:store st})
+        request {:client-id "client-1" :op :approve-feed :stake :low
+                 :pond-id "P-1" :feed-kg 15 :dissolved-oxygen-mgl 1.0}
+        result (actor/run-request! graph request {} "thread-2")]
+    (is (= :hold (:disposition (:state result))))
+    (is (empty? (store/records-of st "client-1")))))
+
+(deftest interrupts-then-approves-chemical-treatment-on-human-approval
+  (let [st (fresh-store)
+        graph (actor/build-graph {:store st})
+        request {:client-id "client-1" :op :approve-chemical-treatment :stake :low
+                 :pond-id "P-1"}
+        interrupted (actor/run-request! graph request {} "thread-3")]
+    (is (= :interrupted (:status interrupted)))
+    (is (empty? (store/records-of st "client-1")))
+    (let [resumed (actor/approve! graph "thread-3")]
+      (is (= :done (:status resumed)))
+      (is (= 1 (count (store/records-of st "client-1")))))))
