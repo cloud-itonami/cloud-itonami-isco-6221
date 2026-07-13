@@ -2,6 +2,28 @@
 
 Open Occupation Blueprint for **ISCO-08 6221**: Aquaculture Workers.
 
+**Maturity: `:implemented`** — AquacultureAdvisor ⊣ AquacultureGovernor
+as a langgraph StateGraph (`intake → advise → govern → decide →
+commit/hold`, human-approval interrupt), modeled on
+cloud-itonami-isco-4311's bookkeeping actor. 14 tests / 29 assertions
+green. The governor never dispatches hardware — it only gates what
+the pond/tank-monitoring robot below may execute.
+
+The feed HARD invariants — arithmetic and water chemistry, not
+judgement:
+
+1. **Per-fish feed ceiling** — a proposed feed dose divided by the
+   registered fish count must not exceed the registered per-fish
+   ceiling.
+2. **Dissolved-oxygen floor** — the measured dissolved oxygen must
+   meet the registered floor before a feed is approved (feeding into
+   oxygen-depleted water accelerates die-off).
+
+`:approve-chemical-treatment` and `:approve-deep-water-operation`
+**always** escalate to human sign-off regardless of confidence, per
+this repo's Trust Controls (business-model.md) — no chemical treatment
+or deep-water operation is ever auto-committed.
+
 This repository designs a forkable OSS business for an independent aquaculture operator: a pond/tank-monitoring robot performs water-quality sensing and feed dispensing under a governor-gated actor, so the operator keeps their own stock and water-quality records instead of renting a closed aquaculture-management SaaS.
 
 ## Robotics premise
