@@ -1,0 +1,41 @@
+;; What this vertical's robot physically does, declared for
+;; kotoba.robotics.process (kotoba-lang/robotics). `kbb -M:physics` runs it.
+;;
+;; README "Robotics premise": a pond/tank-monitoring robot performs
+;; water-quality sensing, feed dispensing and stock counting for aquaculture
+;; workers (ISCO 6221). Its physical work here: a partial water exchange of a
+;; circular rearing tank when sensing flags poor water quality, the pump power
+;; of the make-up water line, and carrying feed bags along the tank row.
+;;
+;; Every number without a cited source is marked `estimate` in its :basis.
+;; Replacing an estimate with a sourced value is this bot's growth work.
+{:physics/schema "itonami.physical-ai.spec.v1"
+ :repo "cloud-itonami/cloud-itonami-isco-6221"
+ :cases
+ [{:id :rearing-tank-half-exchange
+   :kind :tank-drain
+   :procedure "water-quality response: drain a 3 m circular rearing tank from 1.2 m to 0.6 m through its standpipe outlet"
+   :params {:tank-area-m2 7.07 :h0-m 1.2 :h-target-m 0.6 :cd 0.62}
+   :sweep {:param :orifice-area-m2 :values [0.001 0.002 0.004 0.008 0.012]}
+   :quantity :time-to-target-s
+   :limit {:max 1800.0 :basis "estimate: fish should not sit at half depth with reduced dilution for more than ~30 minutes before refilling"}
+   :boundary {:lo 0.0005 :hi 0.02}}
+  {:id :make-up-water-line
+   :kind :pipe-flow
+   :procedure "refill: pump power to push make-up water through 60 m of 75 mm PVC line with a 3 m lift to the tank"
+   :params {:diameter-m 0.075 :length-m 60.0 :roughness-m 1.5e-6
+            :density-kg-m3 998.0 :viscosity-pa-s 1.0e-3 :pump-efficiency 0.6 :elevation-m 3.0}
+   :sweep {:param :q-m3s :values [0.002 0.004 0.006 0.009 0.012 0.015]}
+   :quantity :pump-power-w
+   :limit {:max 750.0 :basis "estimate: the farm's make-up water pump is a ~0.75 kW unit"}
+   :boundary {:lo 0.001 :hi 0.03}}
+  {:id :feed-bags-along-tank-row
+   :kind :transport
+   :procedure "feed-dispensing robot carries feed bags 50 m along the tank row on a wet concrete walkway"
+   :params {:mass-kg 60.0 :distance-m 50.0 :v-max-mps 0.7 :a-max-mps2 0.3
+            :brake-decel-mps2 0.5 :drive-force-n 150.0 :crr 0.02
+            :cog-height-m 0.45 :support-half-length-m 0.30}
+   :sweep {:param :payload-kg :values [20.0 40.0 80.0 120.0 160.0]}
+   :quantity :cycle-time-s
+   :limit {:max 120.0 :basis "estimate: a feeding round across the tank row must finish within ~10 minutes, 5 trips"}
+   :boundary {:lo 5.0 :hi 800.0}}]}
