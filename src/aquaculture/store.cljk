@@ -1,6 +1,6 @@
 (ns aquaculture.store
   "SSoT for the ISCO-08 6221 independent aquaculture operations actor
-  (itonami actor pattern, ADR-2607011000 / CLAUDE.md Actors section;
+  (itonami actor pattern, ADR-2607011000 / AGENTS.md Actors section;
   README's 'Robotics premise' — a pond/tank-monitoring robot performs
   water-quality sensing, feed dispensing and stock counting under
   this advisor/governor pair, which never dispatches hardware
